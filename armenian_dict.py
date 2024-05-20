@@ -42,7 +42,7 @@ async def transliterate_to_armenian(text):
                     # Получение обновленного значения count
                     cursor.execute('SELECT count FROM unknown_words WHERE word = ?', (word.lower(),))
                     count = cursor.fetchone()[0]
-                    if count >= max_count:
+                    if count >= max_count and len(word) > 1:
                         # Удаление слова из таблицы unknown_words
                         cursor.execute('DELETE FROM unknown_words WHERE word = ?', (word.lower(),))
                         # Добавление слова в таблицу translation_dict
