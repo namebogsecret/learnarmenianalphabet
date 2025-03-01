@@ -253,3 +253,261 @@ def register_transliteration_handlers(dp: Dispatcher, config: Config = None):
     )
     
     logger.info("Обработчики модуля транслитерации зарегистрированы")
+
+"""
+Obrabotchiki soobshcheniy dlya modulya transliteratsii.
+
+Soderzhit funktsii-obrabotchiki dlya raboty s soobshcheniyami, 
+svyazannymi s transliteratsiyey russkogo teksta na armyanskiy.
+"""
+
+import logging
+import re
+from aiogram import Dispatcher, types
+from config.config import Config
+from core.database import add_or_update_user
+from services.openai_service import get_completion
+from services.translation import get_translation, translate_and_save
+from features.transliteration.utils import process_text, process_unknown_word, add_translation
+
+logger = logging.getLogger(__name__)
+
+async def text_handler(message: types.Message, config: Config = None):
+    """
+    Osnovnoy obrabotchik tekstovykh soobshcheniy.
+    
+    Obrabatyvayet vkhodyashchiye soobshcheniya i otpravlyayet transliterirovannyy i perevedennyy otvet.
+    
+    Args:
+        message: Soobshcheniye ot pol'zovatelya.
+        config: Konfiguratsiya bota (optsional'no).
+    """
+    user_id = message.from_user.id
+    username = message.from_user.username or message.from_user.full_name
+    question = message.text
+    db_path = config.db_path if config else 'translations.db'
+    
+    # Logiruyem zapros
+    logger.info(f"Received message from {username} ({user_id}): {question[:50]}...")
+    
+    try:
+        # Obnovlyayem statistiku ispol'zovaniya
+        times = await add_or_update_user(user_id, username, db_path)
+        
+        # Obrabatyvaem zapros v zavisimosti ot ego tipa
+        if question.startswith('?'):
+            # Zapros k OpenAI dlya polucheniya otveta na vopros
+            clean_question = question[1:].strip()
+            
+            if not clean_question:
+                await message.answer("Pozhaluysta, vvedite vopros posle znaka voprosa.")
+                return
+            
+            # Show typing action
+            await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
+            
+            # Poluchayem otvet ot OpenAI
+            try:
+                openai_response = await get_completion(clean_question)
+                
+                # Transliteriruyem otvet
+                await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
+                armenian_answer = await process_text(openai_response, db_path)
+                
+                # Otpravlyayem oba otveta: original'nyy i transliterirovannyy
+                await message.answer(f"{openai_response}\n\n{armenian_answer}")
+            except Exception as e:
+                logger.error(f"Error getting OpenAI response: {e}")
+                await message.answer(f"Oshibka pri poluchenii otveta: {str(e)}")
+        else:
+            # Prostaya transliteratsiya teksta
+            await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
+            response = await process_text(question, db_path)
+            await message.answer(response)
+    
+    except Exception as e:
+        logger.error(f"Error processing message: {e}", exc_info=True)
+        await message.answer(f"Proizoshla oshibka pri obrabotke soobshcheniya. Pozhaluysta, poprobuite pozzhe.")
+
+async def add_word_handler(message: types.Message, config: Config = None):
+    """
+    Obrabotchik komandy /add_word.
+    
+    Dobavlyayet novoye slovo i ego perevod v slovar'.
+    
+    Args:
+        message: Soobshcheniye ot pol'zovatelya.
+        config: Konfiguratsiya bota (optsional'no).
+    """
+    db_path = config.db_path if config else 'translations.db'
+    
+    # Parsim argumenty komandy
+    args = message.get_args().split(None, 1)
+    
+    if len(args) < 2:
+        await message.answer(
+            "Pozhaluysta, ukazhite slovo i perevod: /add_word <slovo> <perevod>"
+        )
+        return
+    
+    word = args[0].lower()
+    translation = args[1]
+    
+    # Dobavlyayem slovo v slovar'
+    success = await add_translation(word, translation, db_path)
+    
+    if success:
+        await message.answer(f"Slovo '{word}' uspeshno dobavleno v slovar' s perevodom '{translation}'")
+    else:
+        await message.answer(f"Oshibka pri dobavlenii slova '{word}' v slovar'")
+
+async def translate_handler(message: types.Message, config: Config = None):
+    """
+    Obrabotchik komandy /translate.
+    
+    Perevodit slovo ili frazu na armyanskiy s pomoshch'yu OpenAI.
+    
+    Args:
+        message: Soobshcheniye ot pol'zovatelya.
+        config: Konfiguratsiya bota (optsional'no).
+    """
+    db_path = config.db_path if config else 'translations.db'
+    
+    # Poluchayem tekst dlya perevoda
+    text = message.get_args()
+    
+    if not text:
+        await message.answer(
+            "Pozhaluysta, ukazhite tekst dlya perevoda: /translate <tekst>"
+        )
+        return
+    
+    # Show typing action
+    await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
+    
+    # Perevodim tekst
+    try:
+        translation = await translate_and_save(text, db_path)
+        
+        if translation:
+            await message.answer(f"Perevod: {translation}")
+        else:
+            await message.answer("Ne udalos' poluchit' perevod. Pozhaluysta, poprobuite pozzhe.")
+    except Exception as e:
+        logger.error(f"Translation error: {e}")
+        await message.answer(f"Oshibka pri perevode: {str(e)}")
+
+async def word_handler(message: types.Message, config: Config = None):
+    """
+    Obrabotchik komandy /word.
+    
+    Vozvrashchayet perevod slova iz slovarya.
+    
+    Args:
+        message: Soobshcheniye ot pol'zovatelya.
+        config: Konfiguratsiya bota (optsional'no).
+    """
+    db_path = config.db_path if config else 'translations.db'
+    
+    # Poluchayem slovo dlya perevoda
+    word = message.get_args().lower()
+    
+    if not word:
+        await message.answer(
+            "Pozhaluysta, ukazhite slovo dlya perevoda: /word <slovo>"
+        )
+        return
+    
+    # Poluchayem perevod iz bazy dannykh
+    translation = await get_translation(word, db_path)
+    
+    if translation:
+        await message.answer(f"Slovo: {word}\nPerevod: {translation}")
+    else:
+        await message.answer(
+            f"Perevod dlya slova '{word}' ne nayden v slovare. "
+            f"Vy mozhete dobavit' ego s pomoshch'yu komandy: "
+            f"/add_word {word} <perevod>"
+        )
+
+async def help_handler(message: types.Message):
+    """
+    Obrabotchik komandy /help.
+    
+    Otobrazhayet spravku po ispol'zovaniyu bota.
+    
+    Args:
+        message: Soobshcheniye ot pol'zovatelya.
+    """
+    help_text = """
+🇦🇲 *Armenian Learning Bot* 🇦🇲
+
+Etot bot pomozhet vam izuchat' armyanskiy yazyk cherez transliteratsiyu i perevod.
+
+*Osnovnyye komandy:*
+- Otprav'te lyuboy tekst na russkom, chtoby poluchit' ego transliteratsiyu
+- Otprav'te soobshcheniye, nachinayushcheyesya s ?, chtoby zadat' vopros botu (naprimer: ?kak dela?)
+- /word <slovo> - poluchit' perevod slova iz slovarya
+- /translate <tekst> - perevesti slovo ili frazu na armyanskiy
+- /add_word <slovo> <perevod> - dobavit' novoye slovo v slovar'
+
+*Dopolnitel'nyye komandy:*
+- /help - pokazat' etu spravku
+- /settings - nastroiki bota
+
+Bot avtomaticheski zapominayet neizvestnyye slova i dobavlyayet ikh v slovar' posle neskol'kikh ispol'zovaniy.
+    """
+    
+    await message.answer(help_text, parse_mode="Markdown")
+
+async def start_handler(message: types.Message):
+    """
+    Obrabotchik komandy /start.
+    
+    Otobrazhayet privetstvennoe soobshcheniye i kratkuyu instruktsiyu.
+    
+    Args:
+        message: Soobshcheniye ot pol'zovatelya.
+    """
+    user_name = message.from_user.first_name
+    
+    welcome_text = f"""
+👋 Privet, {user_name}!
+
+Dobro pozhalovat' v Armenian Learning Bot! 🇦🇲
+
+Ya pomogu vam izuchat' armyanskiy yazyk cherez transliteratsiyu i perevod.
+
+*Kak menya ispol'zovat':*
+- Otprav'te lyuboy tekst na russkom, chtoby poluchit' ego transliteratsiyu
+- Ispol'zuyte ? pered voprosom, chtoby poluchit' otvet ot II
+- Ispol'zuyte komandu /help dlya polucheniya polnoy spravki
+
+Udachi v izuchenii armyanskogo yazyka! 🚀
+    """
+    
+    await message.answer(welcome_text, parse_mode="Markdown")
+
+def register_transliteration_handlers(dp: Dispatcher, config: Config = None):
+    """
+    Registriruet obrabotchiki modulya transliteratsii.
+    
+    Args:
+        dp: Dispetcher bota.
+        config: Konfiguratsiya bota (optsional'no).
+    """
+    # Obrabotchiki komand
+    dp.register_message_handler(start_handler, commands=["start"])
+    dp.register_message_handler(help_handler, commands=["help"])
+    dp.register_message_handler(word_handler, commands=["word"])
+    dp.register_message_handler(translate_handler, commands=["translate"])
+    dp.register_message_handler(add_word_handler, commands=["add_word"])
+    
+    # Osnovnoy obrabotchik teksta (s chastichnym primeneniyem config)
+    dp.register_message_handler(
+        lambda message: text_handler(message, config),
+        lambda message: message.chat.type == 'private' and message.text is not None,
+        content_types=['text']
+    )
+    
+    logger.info("Obrabotchiki modulya transliteratsii zaregistrirovany")
