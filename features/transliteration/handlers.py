@@ -274,60 +274,57 @@ logger = logging.getLogger(__name__)
 
 async def text_handler(message: types.Message, config: Config = None):
     """
-    Osnovnoy obrabotchik tekstovykh soobshcheniy.
+    Main handler for text messages.
     
-    Obrabatyvayet vkhodyashchiye soobshcheniya i otpravlyayet transliterirovannyy i perevedennyy otvet.
-    
-    Args:
-        message: Soobshcheniye ot pol'zovatelya.
-        config: Konfiguratsiya bota (optsional'no).
+    Processes incoming messages and sends transliterated and translated responses.
     """
     user_id = message.from_user.id
     username = message.from_user.username or message.from_user.full_name
     question = message.text
     db_path = config.db_path if config else 'translations.db'
     
-    # Logiruyem zapros
+    # Log the request
     logger.info(f"Received message from {username} ({user_id}): {question[:50]}...")
     
     try:
-        # Obnovlyayem statistiku ispol'zovaniya
+        # Update usage statistics
         times = await add_or_update_user(user_id, username, db_path)
         
-        # Obrabatyvaem zapros v zavisimosti ot ego tipa
+        # Process the request based on its type
         if question.startswith('?'):
-            # Zapros k OpenAI dlya polucheniya otveta na vopros
+            # OpenAI request for answering a question
             clean_question = question[1:].strip()
             
             if not clean_question:
-                await message.answer("Pozhaluysta, vvedite vopros posle znaka voprosa.")
+                await message.answer("Please enter a question after the question mark.")
                 return
             
             # Show typing action
             await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
             
-            # Poluchayem otvet ot OpenAI
+            # Get response from OpenAI
             try:
+                from services.openai_service import get_completion
                 openai_response = await get_completion(clean_question)
                 
-                # Transliteriruyem otvet
+                # Transliterate the response
                 await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
                 armenian_answer = await process_text(openai_response, db_path)
                 
-                # Otpravlyayem oba otveta: original'nyy i transliterirovannyy
+                # Send both responses: original and transliterated
                 await message.answer(f"{openai_response}\n\n{armenian_answer}")
             except Exception as e:
                 logger.error(f"Error getting OpenAI response: {e}")
-                await message.answer(f"Oshibka pri poluchenii otveta: {str(e)}")
+                await message.answer(f"Error getting response: {str(e)}")
         else:
-            # Prostaya transliteratsiya teksta
+            # Simple text transliteration
             await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
             response = await process_text(question, db_path)
             await message.answer(response)
     
     except Exception as e:
         logger.error(f"Error processing message: {e}", exc_info=True)
-        await message.answer(f"Proizoshla oshibka pri obrabotke soobshcheniya. Pozhaluysta, poprobuite pozzhe.")
+        await message.answer(f"An error occurred while processing your message. Please try again later.")
 
 async def add_word_handler(message: types.Message, config: Config = None):
     """

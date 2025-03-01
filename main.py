@@ -7,6 +7,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from config.config import load_config
 from config.logging_config import setup_logging
+from data.migrations.init_db import run_migrations
 
 # Инициализация логирования
 logger = logging.getLogger(__name__)
@@ -24,6 +25,18 @@ async def main():
         logger.error("Telegram token is missing. Please set TELEGRAM_API in .env file.")
         return
     
+    # Инициализация базы данных
+    try:
+        logger.info("Initializing database...")
+        await run_migrations(config.db_path)
+    except Exception as e:
+        logger.error(f"Database initialization error: {e}")
+        return
+    
+    # Add after config is loaded but before bot starts polling
+    from data.migrations import run_migrations
+    await run_migrations(config.db_path)
+
     # Применение nest_asyncio для работы в Jupyter Notebook, если нужно
     nest_asyncio.apply()
     
@@ -33,45 +46,17 @@ async def main():
     dp.middleware.setup(LoggingMiddleware())
     
     # Импорт здесь, чтобы избежать циклических импортов
-    from core.middleware import setup_middlewares
     from features.transliteration.handlers import register_transliteration_handlers
-    from features.learning.handlers import register_learning_handlers
-    from features.spaced_repetition.handlers import register_srs_handlers
-    from features.games.handlers import register_games_handlers
-    from features.voice_learning.handlers import register_voice_handlers
-    from features.community.handlers import register_community_handlers
-    from features.analytics.handlers import register_analytics_handlers
-    from features.user_settings.handlers import register_settings_handlers
     
-    # Настройка middleware
-    setup_middlewares(dp, config)
+    # Ensure config is passed to the transliteration handler registration
+    register_transliteration_handlers(dp, config)
     
-    # Регистрация обработчиков
-    register_transliteration_handlers(dp)
-    
-    # Регистрация новых обработчиков (если соответствующие модули готовы)
-    # Раскомментируйте по мере имплементации каждого модуля
-    # register_learning_handlers(dp)
-    # register_srs_handlers(dp)
-    # register_games_handlers(dp)
-    # register_voice_handlers(dp)
-    # register_community_handlers(dp)
-    # register_analytics_handlers(dp)
-    # register_settings_handlers(dp)
-    
-    # Импорт и настройка планировщика задач
-    from core.scheduler import setup_scheduler
-    scheduler = await setup_scheduler(bot, config)
-    
+    # Запускаем бота
     try:
-        # Запуск сервисов
         logger.info("Bot started polling")
         await dp.start_polling()
     finally:
-        # Закрытие сессий и соединений
         await bot.close()
-        if scheduler and scheduler.running:
-            scheduler.shutdown()
         logger.info("Bot stopped")
 
 if __name__ == "__main__":
