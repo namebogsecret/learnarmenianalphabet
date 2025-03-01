@@ -156,6 +156,8 @@ INDICES: Dict[str, str] = {
     "idx_unknown_words_count": "CREATE INDEX IF NOT EXISTS idx_unknown_words_count ON unknown_words (count)"
 }
 
+
+
 async def setup_basic_tables(db_path: str = 'translations.db') -> None:
     """
     Создает основные таблицы базы данных.
@@ -422,3 +424,160 @@ async def run_incremental_migrations(db_path: str = 'translations.db') -> None:
             break
     
     logger.info(f"Инкрементальные миграции завершены. Текущая версия: {await check_db_version(db_path)}")
+
+"""
+Модуль для инициализации и миграции базы данных.
+
+Содержит скрипты для создания необходимых таблиц и заполнения начальными данными.
+"""
+import sys
+import os
+from pathlib import Path
+
+# Add project root to Python path
+project_root = str(Path(__file__).parent.parent.parent)
+sys.path.insert(0, project_root)
+
+import logging
+import json
+from datetime import datetime
+from typing import Dict, List, Any, Optional
+import aiosqlite
+from core.database import execute_script, execute_query
+from data.dictionaries.armenian_dict import TRANSLATION_DICT
+
+logger = logging.getLogger(__name__)
+
+# [Весь предыдущий код с TABLES и INDICES остается без изменений]
+
+async def check_table_exists(conn: aiosqlite.Connection, table_name: str) -> bool:
+    """
+    Проверяет существование таблицы в базе данных.
+    
+    Args:
+        conn: Соединение с базой данных.
+        table_name: Имя таблицы для проверки.
+        
+    Returns:
+        True, если таблица существует, иначе False.
+    """
+    cursor = await conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+        (table_name,)
+    )
+    return await cursor.fetchone() is not None
+
+async def setup_basic_tables(db_path: str = 'translations.db') -> None:
+    """
+    Создает основные таблицы базы данных.
+    
+    Args:
+        db_path: Путь к файлу базы данных.
+    """
+    # Создаем базовые таблицы
+    basic_tables = ["translation_dict", "unknown_words", "users"]
+    
+    conn = None
+    try:
+        conn = await aiosqlite.connect(db_path)
+        
+        for table_name in basic_tables:
+            if table_name in TABLES:
+                # Проверяем, существует ли таблица перед созданием
+                table_exists = await check_table_exists(conn, table_name)
+                if not table_exists:
+                    await conn.execute(TABLES[table_name])
+                    logger.info(f"Таблица {table_name} создана")
+        
+        await conn.commit()
+        logger.info(f"Основные таблицы проверены в базе данных: {db_path}")
+    except Exception as e:
+        logger.error(f"Ошибка при создании основных таблиц: {e}")
+        if conn:
+            await conn.rollback()
+        raise
+    finally:
+        if conn:
+            await conn.close()
+
+async def check_db_version(db_path: str = 'translations.db') -> int:
+    """
+    Проверяет версию базы данных для определения необходимых миграций.
+    
+    Args:
+        db_path: Путь к файлу базы данных.
+        
+    Returns:
+        Версия базы данных или 0, если версия не определена.
+    """
+    conn = None
+    try:
+        conn = await aiosqlite.connect(db_path)
+        
+        # Проверяем, существует ли таблица с версиями
+        table_exists = await check_table_exists(conn, 'db_version')
+        
+        if not table_exists:
+            # Создаем таблицу с версиями, если её нет
+            await conn.execute(
+                "CREATE TABLE db_version (version INTEGER, updated_at TIMESTAMP)"
+            )
+            await conn.execute(
+                "INSERT INTO db_version (version, updated_at) VALUES (1, CURRENT_TIMESTAMP)"
+            )
+            await conn.commit()
+            logger.info("Создана таблица версий базы данных")
+            return 1
+        
+        # Получаем текущую версию
+        cursor = await conn.execute("SELECT version FROM db_version ORDER BY updated_at DESC LIMIT 1")
+        version = await cursor.fetchone()
+        
+        return version[0] if version else 0
+    except Exception as e:
+        logger.error(f"Критическая ошибка при проверке версии базы данных: {e}")
+        # В случае критической ошибки возвращаем 0, что потребует полной переинициализации
+        return 0
+    finally:
+        if conn:
+            await conn.close()
+
+async def run_incremental_migrations(db_path: str = 'translations.db') -> None:
+    """
+    Запускает инкрементальные миграции, начиная с текущей версии.
+    
+    Args:
+        db_path: Путь к файлу базы данных.
+    """
+    try:
+        # Получаем текущую версию
+        current_version = await check_db_version(db_path)
+        
+        # Максимальная доступная версия
+        max_version = 2  # Обновляйте это значение при добавлении новых миграций
+        
+        if current_version == 0:
+            logger.warning("Не удалось определить версию базы данных. Выполняется полная переинициализация.")
+            # Полная переинициализация
+            await run_migrations(db_path)
+            return
+        
+        logger.info(f"Текущая версия базы данных: {current_version}, доступные миграции до версии: {max_version}")
+        
+        # Выполняем все недостающие миграции последовательно
+        for version in range(current_version + 1, max_version + 1):
+            logger.info(f"Запуск миграции версии {version}")
+            success = await run_specific_migration(version, db_path)
+            
+            if not success:
+                logger.error(f"Миграция версии {version} не выполнена. Прерывание процесса.")
+                break
+        
+        logger.info(f"Инкрементальные миграции завершены. Текущая версия: {await check_db_version(db_path)}")
+    
+    except Exception as e:
+        logger.error(f"Критическая ошибка при выполнении миграций: {e}")
+        # Дополнительная обработка ошибок
+        raise
+
+# Остальные функции (run_migrations, run_specific_migration и другие) остаются без изменений
