@@ -238,17 +238,30 @@ def register_transliteration_handlers(dp: Dispatcher, config: Config = None):
     # Обработчики команд
     dp.register_message_handler(start_handler, commands=["start"])
     dp.register_message_handler(help_handler, commands=["help"])
-    dp.register_message_handler(word_handler, commands=["word"], 
-                             lambda message: bool(message.get_args()))
-    dp.register_message_handler(translate_handler, commands=["translate"], 
-                              lambda message: bool(message.get_args()))
-    dp.register_message_handler(add_word_handler, commands=["add_word"], 
-                             lambda message: len(message.get_args().split()) >= 2)
+    
+    # Исправлены обработчики с лямбда-функциями
+    dp.register_message_handler(
+        word_handler, 
+        commands=["word"], 
+        filter_func=lambda message: bool(message.get_args())
+    )
+    
+    dp.register_message_handler(
+        translate_handler, 
+        commands=["translate"], 
+        filter_func=lambda message: bool(message.get_args())
+    )
+    
+    dp.register_message_handler(
+        add_word_handler, 
+        commands=["add_word"], 
+        filter_func=lambda message: len(message.get_args().split()) >= 2
+    )
     
     # Основной обработчик текста (с частичным применением config)
     dp.register_message_handler(
         lambda message: text_handler(message, config),
-        lambda message: message.chat.type == 'private',
+        lambda message: message.chat.type == 'private' and message.text is not None,
         content_types=['text']
     )
     

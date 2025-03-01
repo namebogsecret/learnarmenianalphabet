@@ -7,7 +7,9 @@ from aiogram import Bot, Dispatcher
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from config.config import load_config
 from config.logging_config import setup_logging
-from data.migrations.init_db import run_migrations
+
+# Импорт миграций
+from data.migrations import run_migrations
 
 # Инициализация логирования
 logger = logging.getLogger(__name__)
@@ -32,10 +34,6 @@ async def main():
     except Exception as e:
         logger.error(f"Database initialization error: {e}")
         return
-    
-    # Add after config is loaded but before bot starts polling
-    from data.migrations import run_migrations
-    await run_migrations(config.db_path)
 
     # Применение nest_asyncio для работы в Jupyter Notebook, если нужно
     nest_asyncio.apply()
@@ -51,10 +49,17 @@ async def main():
     # Ensure config is passed to the transliteration handler registration
     register_transliteration_handlers(dp, config)
     
-    # Запускаем бота
+    # Запускаем бота с параметрами для предотвращения конфликтов
     try:
         logger.info("Bot started polling")
-        await dp.start_polling()
+        await dp.start_polling(
+            # Добавлены параметры для предотвращения конфликтов
+            timeout=20,  # Увеличенный таймаут
+            relax=0.1,   # Небольшая пауза между запросами
+            reset_webhook=True  # Сбросить существующие вебхуки
+        )
+    except Exception as e:
+        logger.error(f"Error during bot polling: {e}")
     finally:
         await bot.close()
         logger.info("Bot stopped")

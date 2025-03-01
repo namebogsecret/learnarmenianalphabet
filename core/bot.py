@@ -5,13 +5,15 @@
 """
 
 import logging
+from typing import Tuple
+from typing import List, Dict, Optional
 from aiogram import Bot, Dispatcher
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from config.config import Config
 
 logger = logging.getLogger(__name__)
 
-def setup_bot(config: Config) -> tuple[Bot, Dispatcher]:
+def setup_bot(config: Config) -> Tuple[Bot, Dispatcher]:
     """
     Создает и настраивает экземпляры бота и диспетчера.
     
@@ -75,7 +77,7 @@ async def send_message_to_admin(bot: Bot, config: Config, message: str) -> None:
     except Exception as e:
         logger.error(f"Ошибка при отправке сообщения администратору: {e}")
 
-async def broadcast_message(bot: Bot, user_ids: list[int], message: str, parse_mode: str = None) -> dict:
+async def broadcast_message(bot: Bot, user_ids: List[int], message: str, parse_mode: str = None) -> Dict:
     """
     Отправляет сообщение нескольким пользователям.
     

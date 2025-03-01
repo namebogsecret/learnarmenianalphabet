@@ -3,6 +3,13 @@
 
 Содержит скрипты для создания необходимых таблиц и заполнения начальными данными.
 """
+import sys
+import os
+from pathlib import Path
+
+# Add project root to Python path
+project_root = str(Path(__file__).parent.parent.parent)
+sys.path.insert(0, project_root)
 
 import logging
 import json

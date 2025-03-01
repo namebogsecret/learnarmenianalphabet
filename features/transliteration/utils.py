@@ -7,7 +7,7 @@
 
 import logging
 import re
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from core.database import (
     get_translation, add_translation as db_add_translation,
     update_unknown_word, check_unknown_word_threshold, remove_unknown_word
@@ -125,7 +125,7 @@ async def add_translation(word: str, translation: str, db_path: str = 'translati
         logger.error(f"Ошибка при добавлении перевода '{word}': {e}")
         return False
 
-async def extract_word_and_translation(text: str) -> tuple[Optional[str], Optional[str]]:
+async def extract_word_and_translation(text: str) -> Tuple[Optional[str], Optional[str]]:
     """
     Извлекает слово и перевод из текста.
     
