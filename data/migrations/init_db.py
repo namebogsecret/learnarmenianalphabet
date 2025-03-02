@@ -20,7 +20,6 @@ from core.database import execute_script, execute_query
 from data.dictionaries.armenian_dict import TRANSLATION_DICT
 
 logger = logging.getLogger(__name__)
-
 # Таблицы базы данных с их SQL-определениями
 TABLES: Dict[str, str] = {
     # Основные таблицы
@@ -157,36 +156,6 @@ INDICES: Dict[str, str] = {
 }
 
 
-
-async def setup_basic_tables(db_path: str = 'translations.db') -> None:
-    """
-    Создает основные таблицы базы данных.
-    
-    Args:
-        db_path: Путь к файлу базы данных.
-    """
-    # Создаем базовые таблицы
-    basic_tables = ["translation_dict", "unknown_words", "users"]
-    
-    conn = None
-    try:
-        conn = await aiosqlite.connect(db_path)
-        
-        for table_name in basic_tables:
-            if table_name in TABLES:
-                await conn.execute(TABLES[table_name])
-        
-        await conn.commit()
-        logger.info(f"Основные таблицы созданы в базе данных: {db_path}")
-    except Exception as e:
-        logger.error(f"Ошибка при создании основных таблиц: {e}")
-        if conn:
-            await conn.rollback()
-        raise
-    finally:
-        if conn:
-            await conn.close()
-
 async def setup_advanced_tables(db_path: str = 'translations.db') -> None:
     """
     Создает дополнительные таблицы для расширенных функций.
@@ -279,49 +248,6 @@ async def run_migrations(db_path: str = 'translations.db') -> None:
     except Exception as e:
         logger.error(f"Ошибка при выполнении миграций: {e}")
         raise
-
-async def check_db_version(db_path: str = 'translations.db') -> int:
-    """
-    Проверяет версию базы данных для определения необходимых миграций.
-    
-    Args:
-        db_path: Путь к файлу базы данных.
-        
-    Returns:
-        Версия базы данных или 0, если версия не определена.
-    """
-    conn = None
-    try:
-        conn = await aiosqlite.connect(db_path)
-        
-        # Проверяем, существует ли таблица с версиями
-        cursor = await conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='db_version'"
-        )
-        exists = await cursor.fetchone()
-        
-        if not exists:
-            # Создаем таблицу с версиями, если её нет
-            await conn.execute(
-                "CREATE TABLE db_version (version INTEGER, updated_at TIMESTAMP)"
-            )
-            await conn.execute(
-                "INSERT INTO db_version (version, updated_at) VALUES (1, CURRENT_TIMESTAMP)"
-            )
-            await conn.commit()
-            return 1
-        
-        # Получаем текущую версию
-        cursor = await conn.execute("SELECT version FROM db_version ORDER BY updated_at DESC LIMIT 1")
-        version = await cursor.fetchone()
-        
-        return version[0] if version else 0
-    except Exception as e:
-        logger.error(f"Ошибка при проверке версии базы данных: {e}")
-        return 0
-    finally:
-        if conn:
-            await conn.close()
 
 async def update_db_version(version: int, db_path: str = 'translations.db') -> None:
     """
@@ -425,28 +351,7 @@ async def run_incremental_migrations(db_path: str = 'translations.db') -> None:
     
     logger.info(f"Инкрементальные миграции завершены. Текущая версия: {await check_db_version(db_path)}")
 
-"""
-Модуль для инициализации и миграции базы данных.
 
-Содержит скрипты для создания необходимых таблиц и заполнения начальными данными.
-"""
-import sys
-import os
-from pathlib import Path
-
-# Add project root to Python path
-project_root = str(Path(__file__).parent.parent.parent)
-sys.path.insert(0, project_root)
-
-import logging
-import json
-from datetime import datetime
-from typing import Dict, List, Any, Optional
-import aiosqlite
-from core.database import execute_script, execute_query
-from data.dictionaries.armenian_dict import TRANSLATION_DICT
-
-logger = logging.getLogger(__name__)
 
 # [Весь предыдущий код с TABLES и INDICES остается без изменений]
 
