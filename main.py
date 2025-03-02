@@ -4,6 +4,7 @@ import logging
 import sys
 import nest_asyncio
 from aiogram import Bot, Dispatcher
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from config.config import load_config
 from config.logging_config import setup_logging
@@ -30,6 +31,8 @@ async def main():
     # Инициализация базы данных
     try:
         logger.info("Initializing database...")
+        from core.database import init_db
+        await init_db(config.db_path)
         await run_migrations(config.db_path)
     except Exception as e:
         logger.error(f"Database initialization error: {e}")
@@ -39,15 +42,41 @@ async def main():
     nest_asyncio.apply()
     
     # Инициализация бота и диспетчера
-    bot = Bot(token=config.telegram_token)
-    dp = Dispatcher(bot)
+    from core.bot import setup_bot
+    bot, dp = await setup_bot(config)
+    
+    # Настройка FSM
+    storage = MemoryStorage()
+    dp = Dispatcher(bot, storage=storage)
     dp.middleware.setup(LoggingMiddleware())
     
-    # Импорт здесь, чтобы избежать циклических импортов
-    from features.transliteration.handlers import register_transliteration_handlers
+    # Настройка middleware
+    from core.middleware import setup_middlewares
+    setup_middlewares(dp, config)
     
-    # Ensure config is passed to the transliteration handler registration
+    # Регистрация обработчиков транслитерации
+    from features.transliteration.handlers import register_transliteration_handlers
     register_transliteration_handlers(dp, config)
+    
+    # Регистрация обработчиков SRS (интервальное повторение) если модуль существует
+    try:
+        from features.spaced_repetition.handlers import register_srs_handlers
+        register_srs_handlers(dp, config)
+        logger.info("SRS handlers registered successfully")
+    except ImportError as e:
+        logger.warning(f"SRS module not available: {e}")
+    
+    # Регистрация обработчиков игр если модуль существует
+    try:
+        # Проверяем, существует ли команда /games
+        from features.games.handlers import cmd_games
+        
+        # Регистрируем обработчик команды /games
+        dp.register_message_handler(cmd_games, commands=["games"])
+        logger.info("Games command handler registered")
+        
+    except ImportError as e:
+        logger.warning(f"Games module not available: {e}")
     
     # Запускаем бота с параметрами для предотвращения конфликтов
     try:
