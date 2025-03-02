@@ -7,7 +7,7 @@
 import logging
 import asyncio
 import random
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any, Union, Set, Tuple
 
 from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
@@ -16,17 +16,16 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from config.config import Config
 from features.games.states import GameStates
-from features.games.hangman import HangmanGame
-from features.games.word_scramble import WordScrambleGame
-from features.games.word_match import WordMatchGame
+from features.games.models import HangmanGame, WordScrambleGame, WordMatchGame
+from features.games.services import get_random_word_for_game, get_word_for_scramble, get_pairs_for_word_match
 from keyboards.inline import get_games_keyboard, get_back_button, get_confirmation_keyboard
 
 logger = logging.getLogger(__name__)
 
 # Словари для хранения активных игр пользователей
-hangman_games = {}
-scramble_games = {}
-match_games = {}
+hangman_games: Dict[int, HangmanGame] = {}
+scramble_games: Dict[int, WordScrambleGame] = {}
+match_games: Dict[int, WordMatchGame] = {}
 
 
 async def cmd_games(message: types.Message):
@@ -50,6 +49,7 @@ async def cmd_games(message: types.Message):
         reply_markup=keyboard,
         parse_mode="HTML"
     )
+    logger.info(f"Отправлено меню игр пользователю {message.from_user.id}")
 
 async def process_game_selection(callback_query: types.CallbackQuery, state: FSMContext, config: Config = None):
     """

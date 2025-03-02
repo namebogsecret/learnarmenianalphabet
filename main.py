@@ -3,7 +3,7 @@ import asyncio
 import logging
 import sys
 import nest_asyncio
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from config.config import load_config
@@ -63,22 +63,25 @@ async def main():
     storage = MemoryStorage()
     dp = Dispatcher(bot, storage=storage)
     dp.middleware.setup(LoggingMiddleware())
-    
+    # async def log_all_messages(message: types.Message):
+    #     logger.info(f"Received message: {message.text} from user {message.from_user.id}")
+    #     return True
+
+    # dp.register_message_handler(log_all_messages, lambda message: True, state="*")
     # Настройка middleware
     from core.middleware import setup_middlewares
     setup_middlewares(dp, config)
-    # Регистрация обработчиков игр если модуль существует
+
+    # Регистрация обработчиков игр
     try:
-        logger.info("Games command handler trying to register")
-        # Проверяем, существует ли команда /games
-        from features.games.handlers import cmd_games
-        
-        # Регистрируем обработчик команды /games
-        dp.register_message_handler(cmd_games, commands=["/games"])
-        logger.info("Games command handler registered")
-        
-    except ImportError as e:
-        logger.warning(f"Games module not available: {e}")
+        logger.info("Регистрация обработчиков игр")
+        from features.games.handlers import register_games_handlers
+        register_games_handlers(dp, config)
+        logger.info("Обработчики игр успешно зарегистрированы")
+    except Exception as e:
+        logger.error(f"Ошибка при регистрации модуля игр: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
     
     # Регистрация обработчиков транслитерации
     from features.transliteration.handlers import register_transliteration_handlers
