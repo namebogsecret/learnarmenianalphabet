@@ -247,9 +247,12 @@ async def update_hangman_game(chat_id: int, user_id: int, message_id: Optional[i
     keyboard = get_hangman_keyboard()
     
     try:
+        # Import Bot correctly - from the main aiogram package
+        from aiogram import Bot
+        
         if message_id:
             # Обновляем существующее сообщение
-            await types.Bot.get_current().edit_message_text(
+            await Bot.get_current().edit_message_text(
                 status_message,
                 chat_id=chat_id,
                 message_id=message_id,
@@ -258,7 +261,7 @@ async def update_hangman_game(chat_id: int, user_id: int, message_id: Optional[i
             )
         else:
             # Отправляем новое сообщение
-            await types.Bot.get_current().send_message(
+            await Bot.get_current().send_message(
                 chat_id,
                 status_message,
                 reply_markup=keyboard,
@@ -267,7 +270,8 @@ async def update_hangman_game(chat_id: int, user_id: int, message_id: Optional[i
     except Exception as e:
         # Если не удалось обновить сообщение (оно не изменилось или устарело),
         # отправляем новое
-        await types.Bot.get_current().send_message(
+        from aiogram import Bot
+        await Bot.get_current().send_message(
             chat_id,
             status_message,
             reply_markup=keyboard,
@@ -293,7 +297,10 @@ async def end_hangman_game_with_result(chat_id: int, user_id: int):
     keyboard.add(InlineKeyboardButton("🎮 Другие игры", callback_data="menu:games"))
     keyboard.add(InlineKeyboardButton("🏠 Главное меню", callback_data="menu:main"))
     
-    await types.Bot.get_current().send_message(
+    # Import Bot correctly
+    from aiogram import Bot
+    
+    await Bot.get_current().send_message(
         chat_id,
         result_message,
         reply_markup=keyboard,
