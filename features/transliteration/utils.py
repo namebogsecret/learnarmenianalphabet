@@ -7,7 +7,7 @@ dobavleniya perevodov i t.d.
 
 import logging
 import re
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from core.database import (
     get_translation, add_translation as db_add_translation,
     update_unknown_word, check_unknown_word_threshold, remove_unknown_word
