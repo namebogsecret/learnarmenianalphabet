@@ -442,33 +442,43 @@ async def word_handler(message: types.Message, config: Config = None):
 
 async def help_handler(message: types.Message):
     """
-    Obrabotchik komandy /help.
+    Обработчик команды /help.
     
-    Otobrazhayet spravku po ispol'zovaniyu bota.
+    Отображает справку по использованию бота.
     
     Args:
-        message: Soobshcheniye ot pol'zovatelya.
+        message: Сообщение от пользователя.
     """
     help_text = """
 🇦🇲 *Armenian Learning Bot* 🇦🇲
 
-Etot bot pomozhet vam izuchat' armyanskiy yazyk cherez transliteratsiyu i perevod.
+Этот бот поможет вам изучать армянский язык через транслитерацию и перевод.
 
-*Osnovnyye komandy:*
-- Otprav'te lyuboy tekst na russkom, chtoby poluchit' ego transliteratsiyu
-- Otprav'te soobshcheniye, nachinayushcheyesya s ?, chtoby zadat' vopros botu (naprimer: ?kak dela?)
-- /word <slovo> - poluchit' perevod slova iz slovarya
-- /translate <tekst> - perevesti slovo ili frazu na armyanskiy
-- /add_word <slovo> <perevod> - dobavit' novoye slovo v slovar'
+*Основные команды:*
+• Отправьте любой текст на русском, чтобы получить его транслитерацию
+• Отправьте сообщение, начинающееся с ?, чтобы задать вопрос боту (например: ?как дела?)
+• /word слово - получить перевод слова из словаря
+• /translate текст - перевести слово или фразу на армянский
+• /add\_word слово перевод - добавить новое слово в словарь
 
-*Dopolnitel'nyye komandy:*
-- /help - pokazat' etu spravku
-- /settings - nastroiki bota
+*Дополнительные команды:*
+• /help - показать эту справку
+• /settings - настройки бота
 
-Bot avtomaticheski zapominayet neizvestnyye slova i dobavlyayet ikh v slovar' posle neskol'kikh ispol'zovaniy.
+Бот автоматически запоминает неизвестные слова и добавляет их в словарь после нескольких использований.
     """
     
-    await message.answer(help_text, parse_mode="Markdown")
+    try:
+        await message.answer(help_text, parse_mode="MarkdownV2")
+    except Exception as e:
+        # If MarkdownV2 fails, try HTML
+        html_help_text = help_text.replace('*', '<b>').replace('_', '<i>')
+        html_help_text = html_help_text.replace('</i>', '</i>').replace('</b>', '</b>')
+        try:
+            await message.answer(html_help_text, parse_mode="HTML")
+        except Exception as e:
+            # If all formatting fails, send plain text
+            await message.answer(help_text.replace('*', '').replace('_', ''), parse_mode=None)
 
 async def start_handler(message: types.Message):
     """
