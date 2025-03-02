@@ -16,6 +16,9 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from config.config import Config
 from features.games.states import GameStates
+from features.games.hangman import HangmanGame
+from features.games.word_scramble import WordScrambleGame
+from features.games.word_match import WordMatchGame
 from keyboards.inline import get_games_keyboard, get_back_button, get_confirmation_keyboard
 
 logger = logging.getLogger(__name__)

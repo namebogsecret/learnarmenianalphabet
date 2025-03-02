@@ -43,7 +43,21 @@ async def main():
     
     # Инициализация бота и диспетчера
     from core.bot import setup_bot
+    # In main.py, after setting up the dispatcher
     bot, dp = await setup_bot(config)
+
+    # Now you can safely schedule tasks
+    async def get_bot_info():
+        try:
+            bot_info = await bot.get_me()
+            logger.info(f"Бот запущен. ID: {bot_info.id}, Имя: {bot_info.full_name}, Юзернейм: @{bot_info.username}")
+            return bot_info
+        except Exception as e:
+            logger.error(f"Ошибка при получении информации о боте: {e}")
+            raise
+
+    # Now dp is fully initialized and has a loop
+    asyncio.create_task(get_bot_info())
     
     # Настройка FSM
     storage = MemoryStorage()
@@ -53,6 +67,18 @@ async def main():
     # Настройка middleware
     from core.middleware import setup_middlewares
     setup_middlewares(dp, config)
+    # Регистрация обработчиков игр если модуль существует
+    try:
+        logger.info("Games command handler trying to register")
+        # Проверяем, существует ли команда /games
+        from features.games.handlers import cmd_games
+        
+        # Регистрируем обработчик команды /games
+        dp.register_message_handler(cmd_games, commands=["/games"])
+        logger.info("Games command handler registered")
+        
+    except ImportError as e:
+        logger.warning(f"Games module not available: {e}")
     
     # Регистрация обработчиков транслитерации
     from features.transliteration.handlers import register_transliteration_handlers
@@ -66,18 +92,7 @@ async def main():
     except ImportError as e:
         logger.warning(f"SRS module not available: {e}")
     
-    # Регистрация обработчиков игр если модуль существует
-    try:
-        # Проверяем, существует ли команда /games
-        from features.games.handlers import cmd_games
-        
-        # Регистрируем обработчик команды /games
-        dp.register_message_handler(cmd_games, commands=["games"])
-        logger.info("Games command handler registered")
-        
-    except ImportError as e:
-        logger.warning(f"Games module not available: {e}")
-    
+
     # Запускаем бота с параметрами для предотвращения конфликтов
     try:
         logger.info("Bot started polling")

@@ -13,16 +13,7 @@ from config.config import Config
 
 logger = logging.getLogger(__name__)
 
-def setup_bot(config: Config) -> Tuple[Bot, Dispatcher]:
-    """
-    Создает и настраивает экземпляры бота и диспетчера.
-    
-    Args:
-        config: Объект конфигурации.
-        
-    Returns:
-        Кортеж (бот, диспетчер).
-    """
+async def setup_bot(config: Config) -> Tuple[Bot, Dispatcher]:
     # Проверка наличия токена
     if not config.telegram_token:
         logger.error("Токен Telegram не указан. Проверьте переменную TELEGRAM_API в .env файле.")
@@ -32,27 +23,13 @@ def setup_bot(config: Config) -> Tuple[Bot, Dispatcher]:
     bot = Bot(token=config.telegram_token)
     
     # Использование хранилища в памяти для FSM
-    # В продакшн-среде можно заменить на другое хранилище (Redis, MongoDB)
     storage = MemoryStorage()
     
     # Создание диспетчера
     dp = Dispatcher(bot, storage=storage)
     
-    # Логирование информации о боте
-    bot_info = None
-    
-    async def get_bot_info():
-        nonlocal bot_info
-        try:
-            bot_info = await bot.get_me()
-            logger.info(f"Бот запущен. ID: {bot_info.id}, Имя: {bot_info.full_name}, Юзернейм: @{bot_info.username}")
-            return bot_info
-        except Exception as e:
-            logger.error(f"Ошибка при получении информации о боте: {e}")
-            raise
-    
-    # Запланировать получение информации о боте при старте диспетчера
-    dp.loop.create_task(get_bot_info())
+    # Получение информации о боте может быть запланировано позже
+    # Например, в main.py после запуска бота
     
     return bot, dp
 
