@@ -66,8 +66,8 @@ class TestSM2Algorithm(unittest.TestCase):
             4, easiness, interval, repetitions
         )
         
-        # Проверяем, что фактор легкости увеличился
-        self.assertGreater(new_easiness, easiness)
+        # Проверяем, что фактор легкости не уменьшился
+        self.assertGreaterEqual(new_easiness, easiness)
         
         # Проверяем, что счетчик повторений увеличился
         self.assertEqual(new_repetitions, repetitions + 1)
@@ -113,7 +113,7 @@ class TestSRSDatabaseFunctions(unittest.TestCase):
     """Тесты для функций работы с базой данных SRS."""
     
     @patch('core.database.execute_query')
-    async def test_update_card_after_review(self, mock_execute_query):
+    def test_update_card_after_review(self, mock_execute_query):
         """Тест обновления карточки после повторения."""
         # Настройка мок-объекта
         mock_execute_query.side_effect = [
@@ -122,7 +122,7 @@ class TestSRSDatabaseFunctions(unittest.TestCase):
         ]
         
         # Тестируем функцию
-        result = await update_card_after_review(1, 4, 1234, 'test.db')
+        result = asyncio.run(update_card_after_review(1, 4, 1234, 'test.db'))
         
         # Проверяем результат
         self.assertTrue(result)
@@ -131,7 +131,7 @@ class TestSRSDatabaseFunctions(unittest.TestCase):
         self.assertEqual(mock_execute_query.call_count, 2)
     
     @patch('core.database.execute_query')
-    async def test_add_card_to_srs(self, mock_execute_query):
+    def test_add_card_to_srs(self, mock_execute_query):
         """Тест добавления новой карточки в SRS."""
         # Настройка мок-объекта
         mock_execute_query.side_effect = [
@@ -140,7 +140,7 @@ class TestSRSDatabaseFunctions(unittest.TestCase):
         ]
         
         # Тестируем функцию
-        result = await add_card_to_srs(1234, 'тест', 'փորձարկում', 'test.db')
+        result = asyncio.run(add_card_to_srs(1234, 'тест', 'փորձարկում', 'test.db'))
         
         # Проверяем результат
         self.assertTrue(result)
@@ -149,7 +149,7 @@ class TestSRSDatabaseFunctions(unittest.TestCase):
         self.assertEqual(mock_execute_query.call_count, 2)
     
     @patch('core.database.execute_query')
-    async def test_get_cards_due_review(self, mock_execute_query):
+    def test_get_cards_due_review(self, mock_execute_query):
         """Тест получения карточек для повторения."""
         # Настройка мок-объекта
         mock_cards = [
@@ -159,7 +159,7 @@ class TestSRSDatabaseFunctions(unittest.TestCase):
         mock_execute_query.return_value = mock_cards
         
         # Тестируем функцию
-        cards = await get_cards_due_review(1234, 10, 'test.db')
+        cards = asyncio.run(get_cards_due_review(1234, 10, 'test.db'))
         
         # Проверяем результат
         self.assertEqual(len(cards), 2)
@@ -170,6 +170,4 @@ class TestSRSDatabaseFunctions(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    # Запускаем асинхронные тесты
-    loop = asyncio.get_event_loop()
     unittest.main()

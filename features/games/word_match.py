@@ -1,14 +1,9 @@
+"""Word match game interface for Armenian learning bot.
+
+Provides :class:`WordMatchGame` class to match Armenian and Russian words.
 """
-Игра "Поиск соответствий" для изучения армянских слов.
 
-Пользователь должен найти соответствия между словами на русском и армянском языках.
-"""
+from .models import WordMatchGame
 
-import random
-import logging
-from typing import List, Dict, Tuple, Optional, Set
-
-logger = logging.getLogger(__name__)
-
-
+__all__ = ["WordMatchGame"]
 
