@@ -15,15 +15,14 @@ from unittest.mock import patch, MagicMock, AsyncMock
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Импортируем модули после завершения их реализации
-# from features.games.hangman import HangmanGame
-# from features.games.word_scramble import WordScrambleGame
-# from features.games.word_match import WordMatchGame
+from features.games.hangman import HangmanGame
+from features.games.word_scramble import WordScrambleGame
+from features.games.word_match import WordMatchGame
 
 
 class TestHangmanGame(unittest.TestCase):
     """Тесты для игры 'Виселица'."""
     
-    @unittest.skip("Модуль HangmanGame еще не реализован")
     def test_initialize_game(self):
         """Тест инициализации игры."""
         game = HangmanGame("тест", "փորձարկում")
@@ -40,7 +39,6 @@ class TestHangmanGame(unittest.TestCase):
         # Проверяем, что игра не завершена
         self.assertFalse(game.is_game_over())
     
-    @unittest.skip("Модуль HangmanGame еще не реализован")
     def test_guess_letter(self):
         """Тест угадывания буквы."""
         game = HangmanGame("тест", "փորձարկում")
@@ -64,7 +62,6 @@ class TestHangmanGame(unittest.TestCase):
         # Проверяем, что счетчик попыток уменьшился
         self.assertEqual(game.attempts_left, game.max_attempts - 1)
     
-    @unittest.skip("Модуль HangmanGame еще не реализован")
     def test_game_over_conditions(self):
         """Тест условий завершения игры."""
         game = HangmanGame("тест", "փորձարկում")
@@ -82,8 +79,9 @@ class TestHangmanGame(unittest.TestCase):
         game = HangmanGame("тест", "փորձարկում")
         
         # Угадываем неправильные буквы до исчерпания попыток
-        for _ in range(game.max_attempts):
-            game.guess_letter("ы")
+        wrong_letters = ["а", "б", "в", "г", "д", "ж"]
+        for l in wrong_letters[:game.max_attempts]:
+            game.guess_letter(l)
         
         # Проверяем, что игра завершена с поражением
         self.assertTrue(game.is_game_over())
@@ -93,7 +91,6 @@ class TestHangmanGame(unittest.TestCase):
 class TestWordScrambleGame(unittest.TestCase):
     """Тесты для игры 'Расшифровка слов'."""
     
-    @unittest.skip("Модуль WordScrambleGame еще не реализован")
     def test_scramble_word(self):
         """Тест перемешивания букв в слове."""
         word = "тест"
@@ -105,7 +102,6 @@ class TestWordScrambleGame(unittest.TestCase):
         # Проверяем, что перемешанное слово содержит те же буквы
         self.assertEqual(sorted(game.scrambled_word), sorted(word))
     
-    @unittest.skip("Модуль WordScrambleGame еще не реализован")
     def test_check_answer(self):
         """Тест проверки ответа пользователя."""
         game = WordScrambleGame("тест", "փորձարկում")
@@ -123,7 +119,6 @@ class TestWordScrambleGame(unittest.TestCase):
 class TestWordMatchGame(unittest.TestCase):
     """Тесты для игры 'Поиск соответствий'."""
     
-    @unittest.skip("Модуль WordMatchGame еще не реализован")
     def test_initialize_game(self):
         """Тест инициализации игры."""
         # Создаем список слов с переводами
@@ -142,7 +137,6 @@ class TestWordMatchGame(unittest.TestCase):
         # Проверяем, что списки слов и переводов имеют одинаковую длину
         self.assertEqual(len(game.russian_words), len(game.armenian_words))
     
-    @unittest.skip("Модуль WordMatchGame еще не реализован")
     def test_check_match(self):
         """Тест проверки соответствия слов."""
         word_pairs = [
@@ -160,7 +154,6 @@ class TestWordMatchGame(unittest.TestCase):
         # Проверяем неправильное соответствие
         self.assertFalse(game.check_match("один", "երկու"))
     
-    @unittest.skip("Модуль WordMatchGame еще не реализован")
     def test_game_completion(self):
         """Тест завершения игры."""
         word_pairs = [
@@ -170,9 +163,11 @@ class TestWordMatchGame(unittest.TestCase):
         
         game = WordMatchGame(word_pairs)
         
-        # Находим все соответствия
-        game.check_match("один", "մեկ")
-        game.check_match("два", "երկու")
+        # Match all pairs using game logic
+        game.select_word("один", "russian")
+        game.select_word("մեկ", "armenian")
+        game.select_word("два", "russian")
+        game.select_word("երկու", "armenian")
         
         # Проверяем, что игра завершена
         self.assertTrue(game.is_completed())
@@ -184,22 +179,18 @@ class TestWordMatchGame(unittest.TestCase):
 # Добавляем тесты для вспомогательных функций игр
 
 class TestGameUtils(unittest.TestCase):
-    """Тесты для вспомогательных функций игр."""
-    
+    """Tests for game utility functions."""
+
     @patch('core.database.execute_query')
-    async def test_get_random_words(self, mock_execute_query):
-        """Тест получения случайных слов из базы данных."""
-        # Реализация будет добавлена после создания соответствующей функции
-        pass
-    
-    @patch('features.games.utils.get_random_words')
-    async def test_generate_game_data(self, mock_get_random_words):
-        """Тест генерации данных для игр."""
-        # Реализация будет добавлена после создания соответствующей функции
-        pass
+    def test_get_random_words(self, mock_execute_query):
+        """Placeholder test for future implementation."""
+        self.assertTrue(True)
+
+    def test_generate_game_data(self):
+        """Placeholder test for future implementation."""
+        self.assertTrue(True)
 
 
 if __name__ == '__main__':
-    # Запускаем асинхронные тесты
-    loop = asyncio.get_event_loop()
     unittest.main()
+

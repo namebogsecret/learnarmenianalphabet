@@ -120,26 +120,19 @@ class TestTranslations(unittest.TestCase):
         # Проверяем отсутствующий перевод
         self.assertIsNone(get_armenian_translation('неизвестное_слово'))
     
-    @patch('core.database.get_db_connection')
-    async def test_get_translation_from_db(self, mock_get_db_connection):
+    @patch('core.database.execute_query')
+    def test_get_translation_from_db(self, mock_execute_query):
         """Тест получения перевода из базы данных."""
-        # Настраиваем мок-объекты
-        mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_conn.cursor.return_value = mock_cursor
-        mock_cursor.fetchone.return_value = ('բարև',)
-        mock_get_db_connection.return_value.__aenter__.return_value = mock_conn
+        mock_execute_query.return_value = [{'translation': 'բարև'}]
         
         # Тестируем функцию
-        result = await get_translation('привет', 'test.db')
+        result = asyncio.run(get_translation('привет', 'test.db'))
         
         # Проверяем результат
         self.assertEqual(result, 'բարև')
         
         # Проверяем вызовы функций
-        mock_get_db_connection.assert_called_once_with('test.db')
-        mock_conn.cursor.assert_called_once()
-        mock_cursor.execute.assert_called_once()
+        mock_execute_query.assert_called_once()
 
 
 class TestTransliterationUtils(unittest.TestCase):
@@ -148,14 +141,14 @@ class TestTransliterationUtils(unittest.TestCase):
     @patch('features.transliteration.utils.transliterate_text')
     @patch('features.transliteration.utils.get_translation')
     @patch('features.transliteration.utils.process_unknown_word')
-    async def test_process_text(self, mock_process_unknown, mock_get_translation, mock_transliterate):
+    def test_process_text(self, mock_process_unknown, mock_get_translation, mock_transliterate):
         """Тест обработки текста с транслитерацией и переводом."""
         # Настраиваем мок-объекты
         mock_transliterate.side_effect = lambda word: f"t_{word}"
         mock_get_translation.side_effect = lambda word, db: 'перевод' if word == 'известное' else None
         
         # Тестируем функцию
-        result = await process_text('известное слово', 'test.db')
+        result = asyncio.run(process_text('известное слово', 'test.db'))
         
         # Проверяем результат
         self.assertIn('t_известное (перевод)', result)
@@ -170,6 +163,4 @@ class TestTransliterationUtils(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    # Запускаем асинхронные тесты
-    loop = asyncio.get_event_loop()
     unittest.main()
