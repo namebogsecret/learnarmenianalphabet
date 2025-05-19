@@ -64,6 +64,9 @@ armenian_bot/
 │   │   ├── __init__.py
 │   │   ├── handlers.py
 │   │   └── utils.py
+│   ├── basic_expressions/       # Базовые слова и выражения
+│   │   ├── __init__.py
+│   │   └── utils.py
 │   ├── community/               # Модуль сообщества
 │   │   ├── __init__.py
 │   │   ├── handlers.py
