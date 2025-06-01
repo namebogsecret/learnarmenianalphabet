@@ -1,40 +1,38 @@
 meta:
-  id: telebot-constructor
-  updated_at: 2025-06-01T11:15:00Z
+  id: armenian-learning-bot
+  updated_at: 2025-06-01T08:00:00Z
   owner: vladimir-podlevskikh
 
 idea:
   summary: >
-    Low-code platform that lets non-programmers visually assemble full-featured
-    Telegram bots by snapping together pre-built blocks and deploy them to the
-    cloud in one click.
+    Telegram bot to learn the Armenian language through transliteration,
+    spaced repetition and interactive games.
   current_state:
     description: >
-      Proof-of-Concept stage: core drag-and-drop editor works, bots authenticate
-      via token, flows run locally through a docker-compose sandbox.
+      Working MVP: transliteration and spaced repetition modules function,
+      basic games are available, unit tests cover core features.
     capabilities:
-      - visual_flow_editor (start, message, buttons, media)
-      - token_based_auth + BotFather auto_registration
-      - live_preview_in_editor
-      - json_import_export
-      - local_docker_compose_smoke_stack
+      - transliteration_module
+      - spaced_repetition_srs
+      - word_games
+      - basic_vocabulary_utils
+      - cli_setup_scripts
   planned_state:
     description: >
-      First public beta with marketplace, collaborative editing, managed
-      hosting and AI-powered block suggestions.
+      First stable release with voice pronunciation, mobile client and
+      cross-platform support.
     capabilities:
-      - community_block_marketplace (payments, AI, CRM, analytics)
-      - one_click_deploy (AWS / Fly.io) with HTTPS & auto_scaling
-      - multi_user_collaboration (RBAC)
-      - usage_analytics_dashboard
-      - ai_block_recommendations
+      - tts_integration
+      - mobile_app_sync
+      - achievements_system
+      - multi_platform_support
+      - developer_api
   nuance_notes:
-    - low_code / zero_code target
-    - target_webhook_ttfb < 200 ms
-    - multi_tenant_day_one
-    - gdpr_compliant_data_retention
+    - openai_based_translations
+    - data_stored_locally
+    - MIT_licensed
 
 stage:
-  current_phase: idea_to_tech_draft
-  progress_pct: 4
+  current_phase: mvp_build
+  progress_pct: 60
 
