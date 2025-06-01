@@ -14,6 +14,8 @@ For more details about the modules and instructions see the [docs](docs/README.m
 1. Install the dependencies: `pip install -r requirements.txt`
 2. Copy `.env.example` to `.env` and fill in your tokens
 3. Run the bot: `python main.py`
+4. Or use the helper script `./run.sh` which pulls updates,
+   installs dependencies and starts the application.
 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
