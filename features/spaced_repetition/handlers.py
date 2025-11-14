@@ -60,46 +60,47 @@ async def cmd_review(message: types.Message, state: FSMContext, config: Config =
         'correct': 0,
         'total': len(cards)
     }
-    
+
     # Отправляем первую карточку
-    await show_card(message.chat.id, user_id)
-    
+    await show_card(message.bot, message.chat.id, user_id)
+
     # Устанавливаем состояние
     await SRSStates.answering.set()
 
-async def show_card(chat_id: int, user_id: int):
+async def show_card(bot: types.Bot, chat_id: int, user_id: int):
     """
     Показывает текущую карточку пользователю.
-    
+
     Args:
+        bot: Экземпляр бота.
         chat_id: ID чата.
         user_id: ID пользователя.
     """
     review_data = active_reviews.get(user_id)
     if not review_data:
         return
-    
+
     cards = review_data['cards']
     current_index = review_data['current_index']
-    
+
     if current_index >= len(cards):
         # Все карточки просмотрены
         return
-    
+
     card = cards[current_index]
-    
+
     # Формируем сообщение с карточкой
     message_text = (
         f"Карточка {current_index + 1}/{len(cards)}\n\n"
         f"<b>{card['word']}</b>\n\n"
         "Вспомните перевод и нажмите кнопку, чтобы проверить."
     )
-    
+
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton("Показать перевод", callback_data="srs:show_translation"))
     keyboard.add(types.InlineKeyboardButton("Пропустить", callback_data="srs:skip"))
-    
-    await types.Bot.get_current().send_message(
+
+    await bot.send_message(
         chat_id=chat_id,
         text=message_text,
         reply_markup=keyboard,
@@ -127,7 +128,7 @@ async def process_show_translation(callback_query: types.CallbackQuery, state: F
     
     if current_index >= len(cards):
         await callback_query.answer("Все карточки просмотрены")
-        await finish_review(callback_query.message.chat.id, user_id, state)
+        await finish_review(callback_query.bot, callback_query.message.chat.id, user_id, state)
         return
     
     card = cards[current_index]
@@ -194,10 +195,10 @@ async def process_rating(callback_query: types.CallbackQuery, state: FSMContext,
     
     if review_data['current_index'] >= len(cards):
         # Все карточки просмотрены
-        await finish_review(callback_query.message.chat.id, user_id, state)
+        await finish_review(callback_query.bot, callback_query.message.chat.id, user_id, state)
     else:
         # Показываем следующую карточку
-        await show_card(callback_query.message.chat.id, user_id)
+        await show_card(callback_query.bot, callback_query.message.chat.id, user_id)
         # Возвращаемся в состояние ответа
         await SRSStates.answering.set()
     
@@ -225,7 +226,7 @@ async def process_skip(callback_query: types.CallbackQuery, state: FSMContext):
     
     if current_index >= len(cards):
         await callback_query.answer("Все карточки просмотрены")
-        await finish_review(callback_query.message.chat.id, user_id, state)
+        await finish_review(callback_query.bot, callback_query.message.chat.id, user_id, state)
         return
     
     card = cards[current_index]
@@ -251,18 +252,19 @@ async def process_skip(callback_query: types.CallbackQuery, state: FSMContext):
     
     if review_data['current_index'] >= len(cards):
         # Все карточки просмотрены
-        await finish_review(callback_query.message.chat.id, user_id, state)
+        await finish_review(callback_query.bot, callback_query.message.chat.id, user_id, state)
     else:
         # Показываем следующую карточку
-        await show_card(callback_query.message.chat.id, user_id)
+        await show_card(callback_query.bot, callback_query.message.chat.id, user_id)
     
     await callback_query.answer()
 
-async def finish_review(chat_id: int, user_id: int, state: FSMContext):
+async def finish_review(bot: types.Bot, chat_id: int, user_id: int, state: FSMContext):
     """
     Завершает сеанс повторения и показывает результаты.
-    
+
     Args:
+        bot: Экземпляр бота.
         chat_id: ID чата.
         user_id: ID пользователя.
         state: Состояние FSM.
@@ -270,14 +272,14 @@ async def finish_review(chat_id: int, user_id: int, state: FSMContext):
     review_data = active_reviews.get(user_id)
     if not review_data:
         return
-    
+
     correct = review_data['correct']
     total = review_data['total']
-    
+
     # Формируем сообщение с результатами
     if total > 0:
         percentage = round(correct / total * 100)
-        
+
         if percentage >= 80:
             emoji = "🎉"
             message = "Отличный результат! Продолжайте в том же духе!"
@@ -287,7 +289,7 @@ async def finish_review(chat_id: int, user_id: int, state: FSMContext):
         else:
             emoji = "🔄"
             message = "Продолжайте тренироваться, и результаты улучшатся!"
-        
+
         result_text = (
             f"{emoji} Повторение завершено!\n\n"
             f"Правильно: {correct} из {total} ({percentage}%)\n\n"
@@ -295,20 +297,20 @@ async def finish_review(chat_id: int, user_id: int, state: FSMContext):
         )
     else:
         result_text = "Повторение завершено!"
-    
+
     # Создаем клавиатуру с кнопками действий
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton("📚 Новое повторение", callback_data="srs:new_review"))
     keyboard.add(types.InlineKeyboardButton("➕ Добавить карточку", callback_data="srs:add_card"))
     keyboard.add(types.InlineKeyboardButton("📊 Статистика", callback_data="srs:stats"))
     keyboard.add(types.InlineKeyboardButton("🏠 Главное меню", callback_data="menu:main"))
-    
-    await types.Bot.get_current().send_message(
+
+    await bot.send_message(
         chat_id=chat_id,
         text=result_text,
         reply_markup=keyboard
     )
-    
+
     # Очищаем данные сессии
     if user_id in active_reviews:
         del active_reviews[user_id]
@@ -328,11 +330,25 @@ async def cmd_add_card(message: types.Message, state: FSMContext):
     """
     # Парсим аргументы команды
     args = message.get_args().split(None, 1)
-    
+
     if len(args) == 2:
         # Если указаны слово и перевод, сразу добавляем карточку
-        word = args[0].lower()
-        translation = args[1]
+        word = args[0].strip().lower()
+        translation = args[1].strip()
+
+        # Валидация входных данных
+        if not word or len(word) > 100:
+            await message.answer(
+                "Слово должно содержать от 1 до 100 символов."
+            )
+            return
+
+        if not translation or len(translation) > 200:
+            await message.answer(
+                "Перевод должен содержать от 1 до 200 символов."
+            )
+            return
+
         await add_card_direct(message, word, translation)
     else:
         # Запрашиваем слово для добавления

@@ -84,15 +84,28 @@ async def add_word_handler(message: types.Message, config: Config = None):
 
     # Парсим аргументы команды
     args = message.get_args().split(None, 1)
-    
+
     if len(args) < 2:
         await message.answer(
             "Пожалуйста, укажите слово и перевод: /add_word <слово> <перевод>"
         )
         return
 
-    word = args[0].lower()
-    translation = args[1]
+    word = args[0].strip().lower()
+    translation = args[1].strip()
+
+    # Валидация входных данных
+    if not word or len(word) > 100:
+        await message.answer(
+            "Слово должно содержать от 1 до 100 символов."
+        )
+        return
+
+    if not translation or len(translation) > 200:
+        await message.answer(
+            "Перевод должен содержать от 1 до 200 символов."
+        )
+        return
 
     # Добавляем слово в словарь
     success = await add_translation(word, translation, db_path)
