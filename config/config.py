@@ -59,10 +59,11 @@ class Config(BaseModel):
     telegram_token: str
     openai_api_key: str
     tts_api_key: Optional[str] = None
-    
+
     # Настройки бота
     max_users: int = 100
     allowed_users: List[int] = []
+    admin_username: str = "bots_admin_Vladimir"  # Username администратора для поддержки
     
     # Настройки базы данных
     db_path: str = "translations.db"
@@ -121,6 +122,7 @@ def load_config() -> Config:
         tts_api_key=getenv("TTS_API_KEY", "").split('#')[0].strip(),
         max_users=safe_int_env("MAX_USERS", 100),
         allowed_users=allowed_users,
+        admin_username=getenv("ADMIN_USERNAME", "bots_admin_Vladimir").split('#')[0].strip(),
         db_path=getenv("DB_PATH", "translations.db").split('#')[0].strip(),
         log_level=getenv("LOG_LEVEL", "INFO").split('#')[0].strip(),
         log_file=getenv("LOG_FILE", "bot.log").split('#')[0].strip(),

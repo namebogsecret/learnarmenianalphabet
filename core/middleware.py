@@ -28,7 +28,7 @@ class AccessControlMiddleware(BaseMiddleware):
     def __init__(self, config: Config):
         """
         Инициализирует middleware контроля доступа.
-        
+
         Args:
             config: Конфигурация с настройками доступа.
         """
@@ -36,6 +36,7 @@ class AccessControlMiddleware(BaseMiddleware):
         self.allowed_users = set(config.allowed_users)
         self.max_users = config.max_users
         self.db_path = config.db_path
+        self.admin_username = config.admin_username
         self.test_message_limit = 5  # Количество тестовых сообщений для новых пользователей
     
     async def on_pre_process_message(self, message: types.Message, data: Dict):
@@ -63,9 +64,9 @@ class AccessControlMiddleware(BaseMiddleware):
         
         # Проверка на тестовые сообщения
         if times == 1:
-            await message.answer(f"У вас есть {self.test_message_limit} тестовых сообщений. Для продолжения работы обратитесь к администратору: @bots_admin_Vladimir")
+            await message.answer(f"У вас есть {self.test_message_limit} тестовых сообщений. Для продолжения работы обратитесь к администратору: @{self.admin_username}")
         elif times > self.test_message_limit:
-            await message.answer(f"Ваши тестовые сообщения закончились. Для продолжения работы обратитесь к администратору: @bots_admin_Vladimir")
+            await message.answer(f"Ваши тестовые сообщения закончились. Для продолжения работы обратитесь к администратору: @{self.admin_username}")
             logger.info(f"Пользователь {user_id} ({username}) превысил лимит тестовых сообщений")
             raise CancelHandler()
     

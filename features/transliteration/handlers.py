@@ -72,103 +72,103 @@ async def text_handler(message: types.Message, config: Config = None):
 
 async def add_word_handler(message: types.Message, config: Config = None):
     """
-    Obrabotchik komandy /add_word.
-    
-    Dobavlyayet novoye slovo i ego perevod v slovar'.
-    
+    Обработчик команды /add_word.
+
+    Добавляет новое слово и его перевод в словарь.
+
     Args:
-        message: Soobshcheniye ot pol'zovatelya.
-        config: Konfiguratsiya bota (optsional'no).
+        message: Сообщение от пользователя.
+        config: Конфигурация бота (опционально).
     """
     db_path = config.db_path if config else 'translations.db'
-    
-    # Parsim argumenty komandy
+
+    # Парсим аргументы команды
     args = message.get_args().split(None, 1)
     
     if len(args) < 2:
         await message.answer(
-            "Pozhaluysta, ukazhite slovo i perevod: /add_word <slovo> <perevod>"
+            "Пожалуйста, укажите слово и перевод: /add_word <слово> <перевод>"
         )
         return
-    
+
     word = args[0].lower()
     translation = args[1]
-    
-    # Dobavlyayem slovo v slovar'
+
+    # Добавляем слово в словарь
     success = await add_translation(word, translation, db_path)
-    
+
     if success:
-        await message.answer(f"Slovo '{word}' uspeshno dobavleno v slovar' s perevodom '{translation}'")
+        await message.answer(f"Слово '{word}' успешно добавлено в словарь с переводом '{translation}'")
     else:
-        await message.answer(f"Oshibka pri dobavlenii slova '{word}' v slovar'")
+        await message.answer(f"Ошибка при добавлении слова '{word}' в словарь")
 
 async def translate_handler(message: types.Message, config: Config = None):
     """
-    Obrabotchik komandy /translate.
-    
-    Perevodit slovo ili frazu na armyanskiy s pomoshch'yu OpenAI.
-    
+    Обработчик команды /translate.
+
+    Переводит слово или фразу на армянский с помощью OpenAI.
+
     Args:
-        message: Soobshcheniye ot pol'zovatelya.
-        config: Konfiguratsiya bota (optsional'no).
+        message: Сообщение от пользователя.
+        config: Конфигурация бота (опционально).
     """
     db_path = config.db_path if config else 'translations.db'
-    
-    # Poluchayem tekst dlya perevoda
+
+    # Получаем текст для перевода
     text = message.get_args()
-    
+
     if not text:
         await message.answer(
-            "Pozhaluysta, ukazhite tekst dlya perevoda: /translate <tekst>"
+            "Пожалуйста, укажите текст для перевода: /translate <текст>"
         )
         return
-    
+
     # Show typing action
     await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
-    
-    # Perevodim tekst
+
+    # Переводим текст
     try:
         translation = await translate_and_save(text, db_path)
-        
+
         if translation:
-            await message.answer(f"Perevod: {translation}")
+            await message.answer(f"Перевод: {translation}")
         else:
-            await message.answer("Ne udalos' poluchit' perevod. Pozhaluysta, poprobuite pozzhe.")
+            await message.answer("Не удалось получить перевод. Пожалуйста, попробуйте позже.")
     except Exception as e:
         logger.error(f"Translation error: {e}")
-        await message.answer(f"Oshibka pri perevode: {str(e)}")
+        await message.answer(f"Ошибка при переводе: {str(e)}")
 
 async def word_handler(message: types.Message, config: Config = None):
     """
-    Obrabotchik komandy /word.
-    
-    Vozvrashchayet perevod slova iz slovarya.
-    
+    Обработчик команды /word.
+
+    Возвращает перевод слова из словаря.
+
     Args:
-        message: Soobshcheniye ot pol'zovatelya.
-        config: Konfiguratsiya bota (optsional'no).
+        message: Сообщение от пользователя.
+        config: Конфигурация бота (опционально).
     """
     db_path = config.db_path if config else 'translations.db'
-    
-    # Poluchayem slovo dlya perevoda
+
+    # Получаем слово для перевода
     word = message.get_args().lower()
-    
+
     if not word:
         await message.answer(
-            "Pozhaluysta, ukazhite slovo dlya perevoda: /word <slovo>"
+            "Пожалуйста, укажите слово для перевода: /word <слово>"
         )
         return
-    
-    # Poluchayem perevod iz bazy dannykh
+
+    # Получаем перевод из базы данных
     translation = await get_translation(word, db_path)
-    
+
     if translation:
-        await message.answer(f"Slovo: {word}\nPerevod: {translation}")
+        await message.answer(f"Слово: {word}\nПеревод: {translation}")
     else:
         await message.answer(
-            f"Perevod dlya slova '{word}' ne nayden v slovare. "
-            f"Vy mozhete dobavit' ego s pomoshch'yu komandy: "
-            f"/add_word {word} <perevod>"
+            f"Перевод для слова '{word}' не найден в словаре. "
+            f"Вы можете добавить его с помощью команды: "
+            f"/add_word {word} <перевод>"
         )
 
 async def help_handler(message: types.Message):

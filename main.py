@@ -2,10 +2,7 @@
 import asyncio
 import logging
 import sys
-import nest_asyncio
 from aiogram import Bot, Dispatcher, types
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from config.config import load_config
 from config.logging_config import setup_logging
 
@@ -38,9 +35,6 @@ async def main():
         logger.error(f"Database initialization error: {e}")
         return
 
-    # Применение nest_asyncio для работы в Jupyter Notebook, если нужно
-    nest_asyncio.apply()
-    
     # Инициализация бота и диспетчера
     from core.bot import setup_bot
     # In main.py, after setting up the dispatcher
@@ -58,19 +52,14 @@ async def main():
 
     # Now dp is fully initialized and has a loop
     asyncio.create_task(get_bot_info())
-    
-    # Настройка FSM
-    storage = MemoryStorage()
-    dp = Dispatcher(bot, storage=storage)
-    dp.middleware.setup(LoggingMiddleware())
-    # async def log_all_messages(message: types.Message):
-    #     logger.info(f"Received message: {message.text} from user {message.from_user.id}")
-    #     return True
 
-    # dp.register_message_handler(log_all_messages, lambda message: True, state="*")
     # Настройка middleware
     from core.middleware import setup_middlewares
     setup_middlewares(dp, config)
+
+    # Регистрация обработчиков базовых команд
+    from features.common.handlers import register_common_handlers
+    register_common_handlers(dp, config)
 
     # Регистрация обработчиков игр
     try:
