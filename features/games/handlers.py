@@ -182,9 +182,9 @@ async def process_hangman_letter(message: types.Message, state: FSMContext):
     
     # Делаем ход
     result = game.guess_letter(text)
-    
+
     # Обновляем состояние игры
-    await update_hangman_game(message.chat.id, user_id, message.message_id)
+    await update_hangman_game(message.bot, message.chat.id, user_id, message.message_id)
 
 async def process_hangman_callback(callback_query: types.CallbackQuery, state: FSMContext):
     """
@@ -217,42 +217,40 @@ async def process_hangman_callback(callback_query: types.CallbackQuery, state: F
             await callback_query.answer("Правильно!")
         else:
             await callback_query.answer("Неверно!")
-        
+
         # Обновляем состояние игры
-        await update_hangman_game(callback_query.message.chat.id, user_id, callback_query.message.message_id)
+        await update_hangman_game(callback_query.bot, callback_query.message.chat.id, user_id, callback_query.message.message_id)
     
     elif data[0] == "game" and data[1] == "exit":
         # Завершаем игру по запросу пользователя
         await end_hangman_game(callback_query.message, user_id, state, "Игра прервана пользователем.")
         await callback_query.answer("Игра завершена")
 
-async def update_hangman_game(chat_id: int, user_id: int, message_id: Optional[int] = None):
+async def update_hangman_game(bot: types.Bot, chat_id: int, user_id: int, message_id: Optional[int] = None):
     """
     Обновляет состояние игры "Виселица" в сообщении.
-    
+
     Args:
+        bot: Экземпляр бота.
         chat_id: ID чата.
         user_id: ID пользователя.
         message_id: ID сообщения для обновления (опционально).
     """
     game = hangman_games[user_id]
-    
+
     # Проверяем, завершена ли игра
     if game.is_game_over():
-        await end_hangman_game_with_result(chat_id, user_id)
+        await end_hangman_game_with_result(bot, chat_id, user_id)
         return
-    
+
     # Отправляем обновленное состояние игры
     status_message = game.get_status_message()
     keyboard = get_hangman_keyboard()
-    
+
     try:
-        # Import Bot correctly - from the main aiogram package
-        from aiogram import Bot
-        
         if message_id:
             # Обновляем существующее сообщение
-            await Bot.get_current().edit_message_text(
+            await bot.edit_message_text(
                 status_message,
                 chat_id=chat_id,
                 message_id=message_id,
@@ -261,7 +259,7 @@ async def update_hangman_game(chat_id: int, user_id: int, message_id: Optional[i
             )
         else:
             # Отправляем новое сообщение
-            await Bot.get_current().send_message(
+            await bot.send_message(
                 chat_id,
                 status_message,
                 reply_markup=keyboard,
@@ -270,43 +268,40 @@ async def update_hangman_game(chat_id: int, user_id: int, message_id: Optional[i
     except Exception as e:
         # Если не удалось обновить сообщение (оно не изменилось или устарело),
         # отправляем новое
-        from aiogram import Bot
-        await Bot.get_current().send_message(
+        await bot.send_message(
             chat_id,
             status_message,
             reply_markup=keyboard,
             parse_mode="HTML"
         )
 
-async def end_hangman_game_with_result(chat_id: int, user_id: int):
+async def end_hangman_game_with_result(bot: types.Bot, chat_id: int, user_id: int):
     """
     Завершает игру "Виселица" и показывает результат.
-    
+
     Args:
+        bot: Экземпляр бота.
         chat_id: ID чата.
         user_id: ID пользователя.
     """
     game = hangman_games[user_id]
-    
+
     # Получаем результат игры
     result_message = game.get_game_result()
-    
+
     # Создаем клавиатуру для повторной игры
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton("🎮 Играть снова", callback_data="game:hangman"))
     keyboard.add(InlineKeyboardButton("🎮 Другие игры", callback_data="menu:games"))
     keyboard.add(InlineKeyboardButton("🏠 Главное меню", callback_data="menu:main"))
-    
-    # Import Bot correctly
-    from aiogram import Bot
-    
-    await Bot.get_current().send_message(
+
+    await bot.send_message(
         chat_id,
         result_message,
         reply_markup=keyboard,
         parse_mode="HTML"
     )
-    
+
     # Удаляем игру из словаря
     if user_id in hangman_games:
         del hangman_games[user_id]
