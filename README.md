@@ -17,5 +17,11 @@ For more details about the modules and instructions see the [docs](docs/README.m
 4. Or use the helper script `./run.sh` which pulls updates,
    installs dependencies and starts the application.
 
+## Production Deployment
+
+For production deployment with systemd service:
+- See [SERVICE_SETUP.md](SERVICE_SETUP.md) for detailed instructions on setting up the bot as a systemd service
+- The `learn_armenian.sh` script is provided for use with systemd
+
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

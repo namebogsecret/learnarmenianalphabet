@@ -1,0 +1,30 @@
+#!/bin/bash
+# Learn Armenian Alphabet Service Startup Script Template
+# Copy this file to learn_armenian.sh and customize paths as needed
+set -e
+
+# PROJECT_DIR should point to your installation directory
+PROJECT_DIR="/root/learnarmenianalphabet"
+
+# Set Python path
+export PYTHONPATH="${PYTHONPATH}:${PROJECT_DIR}"
+
+# Change to project directory
+cd "${PROJECT_DIR}"
+
+# Load environment variables from .env file if it exists
+if [ -f "${PROJECT_DIR}/.env" ]; then
+    export $(grep -v '^#' "${PROJECT_DIR}/.env" | xargs)
+fi
+
+# Activate virtual environment
+if [ -f "${PROJECT_DIR}/venv/bin/activate" ]; then
+    source "${PROJECT_DIR}/venv/bin/activate"
+else
+    echo "Error: Virtual environment not found at ${PROJECT_DIR}/venv"
+    exit 1
+fi
+
+# Run the bot
+# Adjust python version (python3.8, python3.9, etc.) as needed
+exec "${PROJECT_DIR}/venv/bin/python3" "${PROJECT_DIR}/main.py"
