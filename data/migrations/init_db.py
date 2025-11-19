@@ -360,17 +360,34 @@ async def check_table_exists(conn: aiosqlite.Connection, table_name: str) -> boo
     Проверяет существование таблицы в базе данных.
     
     Args:
+
         conn: Соединение с базой данных.
+
         table_name: Имя таблицы для проверки.
-        
+
+ 
+
     Returns:
+
         True, если таблица существует, иначе False.
+
     """
-    cursor = await conn.execute(
+
+    cursor = await conn.cursor()
+
+    await cursor.execute(
+
         "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+
         (table_name,)
+
     )
-    return await cursor.fetchone() is not None
+
+    result = await cursor.fetchone()
+
+    await cursor.close()
+
+    return result is not None
 
 async def setup_basic_tables(db_path: str = 'translations.db') -> None:
     """

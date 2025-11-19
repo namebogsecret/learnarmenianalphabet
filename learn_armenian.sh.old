@@ -1,0 +1,5 @@
+#!/bin/sh
+export PYTHONPATH="${PYTHONPATH}:/root/learnarmenianalphabet/"
+cd /root/learnarmenianalphabet/
+source /root/learnarmenianalphabet/venv/bin/activate
+/root/learnarmenianalphabet/venv/bin/python3.8 /root/learnarmenianalphabet/main.py
