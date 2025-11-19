@@ -17,5 +17,18 @@ For more details about the modules and instructions see the [docs](docs/README.m
 4. Or use the helper script `./run.sh` which pulls updates,
    installs dependencies and starts the application.
 
+## Running as a System Service (Linux)
+
+To run the bot as a systemd service that starts automatically on boot:
+
+1. Run the installation script:
+   ```bash
+   sudo bash install_service.sh
+   ```
+
+2. The service will be installed and enabled to start on boot.
+
+For detailed information about service management, troubleshooting, and configuration, see [docs/SYSTEMD_SERVICE.md](docs/SYSTEMD_SERVICE.md).
+
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

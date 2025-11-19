@@ -2,7 +2,6 @@
 __pycache__
 venv
 .env
-learn_armenian.sh
 *.db
 # Python bytecode
 __pycache__/
@@ -57,6 +56,5 @@ logs/
 .ipynb_checkpoints
 
 # Custom project files
-learn_armenian.sh
 translations_backup/
 temp_audio/
