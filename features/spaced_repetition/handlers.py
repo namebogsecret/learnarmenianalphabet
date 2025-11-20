@@ -9,7 +9,7 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Union, Any
 
-from aiogram import Dispatcher, types
+from aiogram import Bot, Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
@@ -67,7 +67,7 @@ async def cmd_review(message: types.Message, state: FSMContext, config: Config =
     # Устанавливаем состояние
     await SRSStates.answering.set()
 
-async def show_card(bot: types.Bot, chat_id: int, user_id: int):
+async def show_card(bot: Bot, chat_id: int, user_id: int):
     """
     Показывает текущую карточку пользователю.
 
@@ -259,7 +259,7 @@ async def process_skip(callback_query: types.CallbackQuery, state: FSMContext):
     
     await callback_query.answer()
 
-async def finish_review(bot: types.Bot, chat_id: int, user_id: int, state: FSMContext):
+async def finish_review(bot: Bot, chat_id: int, user_id: int, state: FSMContext):
     """
     Завершает сеанс повторения и показывает результаты.
 

@@ -9,7 +9,7 @@ import asyncio
 import random
 from typing import Dict, List, Optional, Any, Union, Set, Tuple
 
-from aiogram import Dispatcher, types
+from aiogram import Bot, Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -226,7 +226,7 @@ async def process_hangman_callback(callback_query: types.CallbackQuery, state: F
         await end_hangman_game(callback_query.message, user_id, state, "Игра прервана пользователем.")
         await callback_query.answer("Игра завершена")
 
-async def update_hangman_game(bot: types.Bot, chat_id: int, user_id: int, message_id: Optional[int] = None):
+async def update_hangman_game(bot: Bot, chat_id: int, user_id: int, message_id: Optional[int] = None):
     """
     Обновляет состояние игры "Виселица" в сообщении.
 
@@ -275,7 +275,7 @@ async def update_hangman_game(bot: types.Bot, chat_id: int, user_id: int, messag
             parse_mode="HTML"
         )
 
-async def end_hangman_game_with_result(bot: types.Bot, chat_id: int, user_id: int):
+async def end_hangman_game_with_result(bot: Bot, chat_id: int, user_id: int):
     """
     Завершает игру "Виселица" и показывает результат.
 
