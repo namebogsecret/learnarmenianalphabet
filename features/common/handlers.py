@@ -6,8 +6,10 @@
 
 import logging
 from aiogram import Dispatcher, types
+from aiogram.dispatcher import FSMContext
 from config.config import Config
 from core.database import add_or_update_user
+from keyboards.inline import get_main_menu_keyboard
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +88,67 @@ async def help_handler(message: types.Message, config: Config = None):
     await message.answer(help_message, parse_mode="Markdown")
 
 
+async def menu_callback_handler(
+    callback_query: types.CallbackQuery,
+    state: FSMContext,
+    config: Config = None,
+):
+    """
+    Обрабатывает навигационные callback-запросы из главного меню.
+
+    Позволяет возвращаться в главное меню или раздел игр из любого состояния,
+    чтобы кнопки меню всегда давали отклик.
+    """
+
+    await callback_query.answer()
+
+    section = callback_query.data.split(":", 1)[1]
+
+    # При переходе по меню завершаем активное состояние, чтобы избежать конфликтов FSM
+    await state.finish()
+
+    if section == "main":
+        keyboard = get_main_menu_keyboard()
+        await callback_query.message.answer(
+            "🏠 Главное меню. Выберите раздел:", reply_markup=keyboard
+        )
+        return
+
+    if section == "games":
+        from features.games.handlers import cmd_games
+
+        await cmd_games(callback_query.message)
+        return
+
+    if section == "help":
+        await help_handler(callback_query.message, config)
+        return
+
+    if section == "review":
+        await callback_query.message.answer(
+            "Для повторения карточек используйте команду /review."
+        )
+        return
+
+    if section == "learn":
+        await callback_query.message.answer(
+            "Раздел обучения готовится. Пока что можно изучать слова через /add_word и /unknown."
+        )
+        return
+
+    if section == "stats":
+        await callback_query.message.answer(
+            "Статистика будет доступна позже. Сейчас можно проверить прогресс через /stats."
+        )
+        return
+
+    if section == "settings":
+        await callback_query.message.answer(
+            "Настройки пока доступны через команду /settings (в разработке)."
+        )
+        return
+
+
 def register_common_handlers(dp: Dispatcher, config: Config):
     """
     Регистрирует обработчики базовых команд.
@@ -103,8 +166,18 @@ def register_common_handlers(dp: Dispatcher, config: Config):
     async def help_wrapper(message: types.Message):
         await help_handler(message, config)
 
+    async def menu_callback_wrapper(
+        callback_query: types.CallbackQuery, state: FSMContext
+    ):
+        await menu_callback_handler(callback_query, state, config)
+
     # Регистрируем обработчики
     dp.register_message_handler(start_wrapper, commands=['start'])
     dp.register_message_handler(help_wrapper, commands=['help'])
+    dp.register_callback_query_handler(
+        menu_callback_wrapper,
+        lambda c: c.data and c.data.startswith('menu:'),
+        state="*",
+    )
 
     logger.info("Обработчики базовых команд успешно зарегистрированы")
